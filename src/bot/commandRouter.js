@@ -67,8 +67,11 @@ function createCommandRouter({
       "<b>Sys / Ops</b>",
       "- <code>/sys reboot</code>",
       "- <code>/sys memory</code>",
-      "- <code>/sys repo_pull &lt;workspace&gt;</code>",
-      "- <code>/sys repo_status &lt;workspace&gt;</code>",
+      "- Konfirmasi: <code>/confirm &lt;kode&gt;</code> / <code>/cancel &lt;kode&gt;</code>",
+      "",
+      "<b>Git Ops</b>",
+      "- <code>/git pull &lt;workspace&gt;</code>",
+      "- <code>/git status &lt;workspace&gt;</code>",
       "- Konfirmasi: <code>/confirm &lt;kode&gt;</code> / <code>/cancel &lt;kode&gt;</code>",
       "",
       "<b>Docker Ops</b>",
@@ -340,6 +343,41 @@ function createCommandRouter({
     return true;
   }
 
+  async function handleGitCommands(chatId, text) {
+    if (text === "/git" || text === "/git help") {
+      const usage = [
+        "Format:",
+        "/git pull <workspace>",
+        "/git status <workspace>",
+      ].join("\n");
+      await safeSend(chatId, usage);
+      return true;
+    }
+
+    if (!text.startsWith("/git ")) return false;
+
+    const parts = text.split(/\s+/);
+    const sub = (parts[1] || "").trim().toLowerCase();
+    const workspace = (parts[2] || "").trim();
+
+    if (!sub || !workspace) {
+      await safeSend(chatId, "Format: /git pull <workspace>\natau: /git status <workspace>");
+      return true;
+    }
+
+    const task = sub === "pull" ? "repo_pull" : sub === "status" ? "repo_status" : null;
+    if (!task) {
+      await safeSend(chatId, "Subcommand /git tidak dikenal. Pakai: pull | status");
+      return true;
+    }
+
+    await enqueueWithConfirm(chatId, "sys", { task, arg1: workspace }, [
+      "Kind: GIT",
+      `Task: ${sub} ${workspace}`,
+    ]);
+    return true;
+  }
+
   async function handleSysCommands(chatId, text) {
     if (!text.startsWith("/sys")) return false;
 
@@ -349,6 +387,11 @@ function createCommandRouter({
 
     if (!task) {
       await safeSend(chatId, sysService.sysHelp());
+      return true;
+    }
+
+    if (task === "repo_pull" || task === "repo_status") {
+      await safeSend(chatId, "Perintah ini sudah dipindah ke /git.\nContoh: /git pull <workspace> atau /git status <workspace>");
       return true;
     }
 
@@ -444,6 +487,7 @@ function createCommandRouter({
     handleApprovalCommands,
     handleCodexManagementCommands,
     handleDockerCommands,
+    handleGitCommands,
     handleSysCommands,
     handleCodexRunCommands,
     handleUnknownSlashCommand,

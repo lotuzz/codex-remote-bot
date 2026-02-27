@@ -11,10 +11,6 @@ function createSysService({ runCmd, resolveWorkspace }) {
       "/sys reboot",
       "/sys memory",
       "",
-      "GIT ops:",
-      "/sys repo_pull <alias>",
-      "/sys repo_status <alias>",
-      "",
       "Semua /sys butuh konfirmasi: /confirm <kode>",
     ].join("\n");
   }
@@ -47,7 +43,7 @@ function createSysService({ runCmd, resolveWorkspace }) {
       // ---- Git ops ----
       case "repo_pull": {
         const alias = (arg1 || "").trim();
-        if (!alias) return { ok: false, code: 1, out: "", err: "Usage: /sys repo_pull <alias>" };
+        if (!alias) return { ok: false, code: 1, out: "", err: "Usage: /git pull <workspace>" };
 
         const dest = resolveWorkspace(alias);
         if (!dest) return { ok: false, code: 1, out: "", err: `Workspace alias '${alias}' tidak ada.` };
@@ -57,7 +53,7 @@ function createSysService({ runCmd, resolveWorkspace }) {
 
       case "repo_status": {
         const alias = (arg1 || "").trim();
-        if (!alias) return { ok: false, code: 1, out: "", err: "Usage: /sys repo_status <alias>" };
+        if (!alias) return { ok: false, code: 1, out: "", err: "Usage: /git status <workspace>" };
 
         const dest = resolveWorkspace(alias);
         if (!dest) return { ok: false, code: 1, out: "", err: `Workspace alias '${alias}' tidak ada.` };
