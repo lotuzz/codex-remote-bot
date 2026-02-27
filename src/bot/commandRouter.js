@@ -43,18 +43,20 @@ function createCommandRouter({
   }
 
   function helpText() {
+    const stripLeadingDash = (line) => String(line || "").replace(/^\s*-\s*/, "").trim();
+
     const workspaceLines = workspaceService
       .formatWorkspaceList()
       .split(/\r?\n/)
       .filter(Boolean)
-      .map((line) => `- <code>${escapeHtml(line)}</code>`)
-      .join("<br/>");
+      .map((line) => `- <code>${escapeHtml(stripLeadingDash(line))}</code>`)
+      .join("\n");
 
     const repoLines = formatRepoList()
       .split(/\r?\n/)
       .filter(Boolean)
-      .map((line) => `- <code>${escapeHtml(line)}</code>`)
-      .join("<br/>");
+      .map((line) => `- <code>${escapeHtml(stripLeadingDash(line))}</code>`)
+      .join("\n");
 
     return [
       "<b>Telegram -&gt; Server Agent</b>",
@@ -100,7 +102,7 @@ function createCommandRouter({
       `- Codex config: <code>${escapeHtml(codexService.getConfigPath())}</code>`,
       `- ALLOW_NETWORK_TASKS=<code>${escapeHtml(String(config.allowNetworkTasks))}</code>`,
       `- Log: <code>${escapeHtml(config.logFile)}</code>`,
-    ].join("<br/>");
+    ].join("\n");
   }
 
   function formatPendingList() {
