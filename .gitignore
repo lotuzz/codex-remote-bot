@@ -25,6 +25,8 @@ coverage/
 .DS_Store
 Thumbs.db
 Desktop.ini
+restart.txt
+start.cmd
 
 .vscode/
 .idea/
