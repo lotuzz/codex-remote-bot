@@ -72,7 +72,7 @@ function createCommandRouter({
       "<b>Git Ops</b>",
       "- <code>/git pull &lt;workspace&gt;</code>",
       "- <code>/git status &lt;workspace&gt;</code>",
-      "<b><i>Konfirmasi: <code>/confirm &lt;kode&gt;</code> / <code>/cancel &lt;kode&gt;</code></i></b>",
+      "<b><i>Konfirmasi: <code>/confirm &lt;kode&gt;</code> atau <code>/cancel &lt;kode&gt;</code></i></b>",
       "",
       "<b>Docker Ops</b>",
       "- <code>/docker | &lt;prompt&gt;</code>",
