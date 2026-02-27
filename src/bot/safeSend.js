@@ -1,7 +1,23 @@
 const { chunkText, sanitizeForTelegramCodeBlock } = require("../utils/text");
 
 function createSafeSend(bot) {
-  return async function safeSend(chatId, text) {
+  return async function safeSend(chatId, text, options = {}) {
+    const mode = options.mode || "code";
+
+    if (mode === "html") {
+      const html = String(text || "");
+      try {
+        await bot.sendMessage(chatId, html, { parse_mode: "HTML" });
+      } catch {
+        const chunks = chunkText(html, 3500);
+        for (const c of chunks) {
+          if (!c) continue;
+          await bot.sendMessage(chatId, c);
+        }
+      }
+      return;
+    }
+
     const msg = sanitizeForTelegramCodeBlock(text);
     const chunks = chunkText(msg, 3500);
 
@@ -19,4 +35,3 @@ function createSafeSend(bot) {
 module.exports = {
   createSafeSend,
 };
-

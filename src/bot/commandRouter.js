@@ -14,6 +14,13 @@ function createCommandRouter({
   let busy = false;
   const pending = new Map(); // code -> { chatId, kind, payload, createdAt }
 
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
   function isAllowed(chatId) {
     if (config.allowedChatIds.size === 0) return false;
     return config.allowedChatIds.has(String(chatId));
@@ -36,37 +43,64 @@ function createCommandRouter({
   }
 
   function helpText() {
+    const workspaceLines = workspaceService
+      .formatWorkspaceList()
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => `- <code>${escapeHtml(line)}</code>`)
+      .join("<br/>");
+
+    const repoLines = formatRepoList()
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => `- <code>${escapeHtml(line)}</code>`)
+      .join("<br/>");
+
     return [
-      "Telegram -> Server Agent",
+      "<b>Telegram -&gt; Server Agent</b>",
       "",
-      "Umum:",
-      "/help",
-      "/id",
-      "/status",
-      "/workspaces",
-      "/pending",
+      "<b>Umum</b>",
+      "- <code>/help</code>",
+      "- <code>/id</code>",
+      "- <code>/status</code>",
+      "- <code>/workspaces</code>",
+      "- <code>/pending</code>",
       "",
-      "Codex (coding):",
-      "/ask <alias> | <prompt>          (sandbox: read-only)",
-      "/run <alias> | <prompt>          (sandbox: workspace-write)",
-      "/runnet <alias> | <prompt>       (workspace-write + network, jika diizinkan)",
+      "<b>Codex (Coding)</b>",
+      "- <code>/ask &lt;alias&gt; | &lt;prompt&gt;</code> (sandbox: read-only)",
+      "- <code>/run &lt;alias&gt; | &lt;prompt&gt;</code> (sandbox: workspace-write)",
+      "- <code>/runnet &lt;alias&gt; | &lt;prompt&gt;</code> (workspace-write + network, jika diizinkan)",
       "",
-      "Sys / Ops:",
-      sysService.sysHelp(),
+      "<b>Sys / Ops</b>",
+      "- <code>/sys docker_install</code>",
+      "- <code>/sys docker_verify</code>",
+      "- <code>/sys ollama_install</code>",
+      "- <code>/sys reboot</code>",
+      "- <code>/sys repo_clone &lt;alias&gt;</code>",
+      "- <code>/sys repo_pull &lt;alias&gt;</code>",
+      "- <code>/sys repo_status &lt;alias&gt;</code>",
+      "- Konfirmasi: <code>/confirm &lt;kode&gt;</code> / <code>/cancel &lt;kode&gt;</code>",
       "",
-      codexHelpText(),
+      "<b>Codex Management</b>",
+      "- <code>/codex</code>",
+      "- <code>/codex version</code>",
+      "- <code>/codex auth</code>",
+      "- <code>/codex model</code>",
+      "- <code>/codex set_model &lt;model&gt;</code>",
+      "- <code>/codex models</code>",
       "",
-      "Workspaces:",
-      workspaceService.formatWorkspaceList(),
+      "<b>Workspaces</b>",
+      workspaceLines || "<i>(kosong)</i>",
       "",
-      "Repos (for clone):",
-      formatRepoList(),
+      "<b>Repos (for clone)</b>",
+      repoLines || "<i>(kosong)</i>",
       "",
-      `Active model: ${codexService.getActiveModel() || "(default Codex recommended model)"}`,
-      `Codex config: ${codexService.getConfigPath()}`,
-      `ALLOW_NETWORK_TASKS=${config.allowNetworkTasks}`,
-      `Log: ${config.logFile}`,
-    ].join("\n");
+      "<b>Info</b>",
+      `- Active model: <code>${escapeHtml(codexService.getActiveModel() || "(default Codex recommended model)")}</code>`,
+      `- Codex config: <code>${escapeHtml(codexService.getConfigPath())}</code>`,
+      `- ALLOW_NETWORK_TASKS=<code>${escapeHtml(String(config.allowNetworkTasks))}</code>`,
+      `- Log: <code>${escapeHtml(config.logFile)}</code>`,
+    ].join("<br/>");
   }
 
   function formatPendingList() {
@@ -133,7 +167,7 @@ function createCommandRouter({
 
   async function handleBasicCommands(chatId, text) {
     if (text === "/start" || text === "/help") {
-      await safeSend(chatId, helpText());
+      await safeSend(chatId, helpText(), { mode: "html" });
       return true;
     }
 
