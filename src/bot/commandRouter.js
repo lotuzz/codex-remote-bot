@@ -221,7 +221,9 @@ function createCommandRouter({
 
     if (text === "/codex auth") {
       const res = await runCmd("codex", ["login", "status"]);
-      const out = res.ok ? res.out : res.out + "\n" + res.err;
+      const out = res.ok
+        ? (res.out || res.err)
+        : [res.out, res.err].filter(Boolean).join("\n");
       await safeSend(chatId, out || "(no output)");
       return true;
     }
@@ -432,4 +434,3 @@ function createCommandRouter({
 module.exports = {
   createCommandRouter,
 };
-
