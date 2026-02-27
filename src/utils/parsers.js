@@ -33,6 +33,19 @@ function parsePipeCommand(body) {
   return { alias, prompt };
 }
 
+function parseDockerPipeCommand(body) {
+  // <container> | <prompt>
+  // or | <prompt>
+  const idx = String(body || "").indexOf("|");
+  if (idx === -1) return null;
+
+  const selector = body.slice(0, idx).trim() || null;
+  const prompt = body.slice(idx + 1).trim();
+  if (!prompt) return null;
+
+  return { selector, prompt };
+}
+
 function parseSecondToken(text) {
   const parts = text.split(/\s+/, 2);
   return parts[1];
@@ -42,6 +55,6 @@ module.exports = {
   parseKeyValueList,
   toBool,
   parsePipeCommand,
+  parseDockerPipeCommand,
   parseSecondToken,
 };
-

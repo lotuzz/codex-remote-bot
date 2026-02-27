@@ -50,7 +50,6 @@ function loadConfig() {
     workspaceMap: parseKeyValueList(process.env.CODEX_WORKSPACES),
     repoMap: parseKeyValueList(process.env.GIT_REPOS),
     allowNetworkTasks: toBool(process.env.ALLOW_NETWORK_TASKS, false),
-    allowGitFreeform: toBool(process.env.ALLOW_GIT_FREEFORM, false),
   };
 }
 

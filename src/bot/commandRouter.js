@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { parsePipeCommand, parseSecondToken } = require("../utils/parsers");
+const { parsePipeCommand, parseSecondToken, parseDockerPipeCommand } = require("../utils/parsers");
 
 function createCommandRouter({
   bot,
@@ -10,6 +10,7 @@ function createCommandRouter({
   workspaceService,
   codexService,
   sysService,
+  dockerService,
 }) {
   let busy = false;
   const pending = new Map(); // code -> { chatId, kind, payload, createdAt }
@@ -38,21 +39,11 @@ function createCommandRouter({
     ].join("\n");
   }
 
-  function formatRepoList() {
-    return Object.entries(config.repoMap).map(([k, v]) => `- ${k} => ${v}`).join("\n") || "(optional: set GIT_REPOS di .env)";
-  }
-
   function helpText() {
     const stripLeadingDash = (line) => String(line || "").replace(/^\s*-\s*/, "").trim();
 
     const workspaceLines = workspaceService
       .formatWorkspaceList()
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => `- <code>${escapeHtml(stripLeadingDash(line))}</code>`)
-      .join("\n");
-
-    const repoLines = formatRepoList()
       .split(/\r?\n/)
       .filter(Boolean)
       .map((line) => `- <code>${escapeHtml(stripLeadingDash(line))}</code>`)
@@ -69,19 +60,21 @@ function createCommandRouter({
       "- <code>/pending</code>",
       "",
       "<b>Codex (Coding)</b>",
-      "- <code>/ask &lt;alias&gt; | &lt;prompt&gt;</code> (sandbox: read-only)",
-      "- <code>/run &lt;alias&gt; | &lt;prompt&gt;</code> (sandbox: workspace-write)",
-      "- <code>/runnet &lt;alias&gt; | &lt;prompt&gt;</code> (workspace-write + network, jika diizinkan)",
+      "- <code>/ask &lt;workspace&gt; | &lt;prompt&gt;</code> (sandbox: read-only)",
+      "- <code>/run &lt;workspace&gt; | &lt;prompt&gt;</code> (sandbox: workspace-write)",
+      "- <code>/runnet &lt;workspace&gt; | &lt;prompt&gt;</code> (workspace-write + network, jika diizinkan)",
       "",
       "<b>Sys / Ops</b>",
-      "- <code>/sys docker_install</code>",
-      "- <code>/sys docker_verify</code>",
-      "- <code>/sys ollama_install</code>",
       "- <code>/sys reboot</code>",
-      "- <code>/sys repo_clone &lt;alias&gt;</code>",
-      "- <code>/sys repo_pull &lt;alias&gt;</code>",
-      "- <code>/sys repo_status &lt;alias&gt;</code>",
+      "- <code>/sys memory</code>",
+      "- <code>/sys repo_pull &lt;workspace&gt;</code>",
+      "- <code>/sys repo_status &lt;workspace&gt;</code>",
       "- Konfirmasi: <code>/confirm &lt;kode&gt;</code> / <code>/cancel &lt;kode&gt;</code>",
+      "",
+      "<b>Docker Ops</b>",
+      "- <code>/docker | &lt;prompt&gt;</code>",
+      "- <code>/docker &lt;container&gt; | &lt;prompt&gt;</code>",
+      "- Contoh: <code>/docker web | cek logs error lalu restart</code>",
       "",
       "<b>Codex Management</b>",
       "- <code>/codex</code>",
@@ -93,9 +86,6 @@ function createCommandRouter({
       "",
       "<b>Workspaces</b>",
       workspaceLines || "<i>(kosong)</i>",
-      "",
-      "<b>Repos (for clone)</b>",
-      repoLines || "<i>(kosong)</i>",
       "",
       "<b>Info</b>",
       `- Active model: <code>${escapeHtml(codexService.getActiveModel() || "(default Codex recommended model)")}</code>`,
@@ -155,6 +145,10 @@ function createCommandRouter({
         return codexService.setDefaultModel(value);
       }
       return { ok: false, code: 1, out: "", err: "Unknown codex_admin action" };
+    }
+
+    if (item.kind === "docker") {
+      return dockerService.execDockerPlan(item.payload.plan);
     }
 
     return { ok: false, code: 1, out: "", err: "Unknown task kind." };
@@ -303,6 +297,49 @@ function createCommandRouter({
     return false;
   }
 
+  async function handleDockerCommands(chatId, text) {
+    if (text === "/docker" || text === "/docker help") {
+      const usage = [
+        "Format:",
+        "/docker | <prompt>",
+        "/docker <container> | <prompt>",
+        "",
+        "Contoh:",
+        "/docker | cek container yang error",
+        "/docker web | cek logs 100 lines",
+        "/docker web | cek error lalu restart",
+      ].join("\n");
+      await safeSend(chatId, usage);
+      return true;
+    }
+
+    if (!/^\/docker(\s|\|)/.test(text)) return false;
+
+    const parsed = parseDockerPipeCommand(text.slice("/docker".length).trim());
+    if (!parsed) {
+      await safeSend(chatId, "Format: /docker | <prompt>\natau: /docker <container> | <prompt>");
+      return true;
+    }
+
+    const planned = await dockerService.planDockerTask({
+      containerSelector: parsed.selector,
+      prompt: parsed.prompt,
+    });
+
+    if (!planned.ok || !planned.plan) {
+      await safeSend(chatId, `Docker plan gagal:\n${planned.err || planned.out || "(unknown error)"}`);
+      return true;
+    }
+
+    const preview = dockerService.formatPlanPreview(planned.plan);
+    await enqueueWithConfirm(chatId, "docker", { plan: planned.plan }, [
+      "Kind: DOCKER",
+      ...preview.split(/\r?\n/),
+    ]);
+
+    return true;
+  }
+
   async function handleSysCommands(chatId, text) {
     if (!text.startsWith("/sys")) return false;
 
@@ -406,6 +443,7 @@ function createCommandRouter({
     handleBasicCommands,
     handleApprovalCommands,
     handleCodexManagementCommands,
+    handleDockerCommands,
     handleSysCommands,
     handleCodexRunCommands,
     handleUnknownSlashCommand,

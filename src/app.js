@@ -8,6 +8,7 @@ const { createProcessService } = require("./services/processService");
 const { createWorkspaceService } = require("./services/workspaceService");
 const { createCodexService } = require("./services/codexService");
 const { createSysService } = require("./services/sysService");
+const { createDockerService } = require("./services/dockerService");
 
 function startApp() {
   const config = loadConfig();
@@ -30,9 +31,10 @@ function startApp() {
   const sysService = createSysService({
     runCmd,
     resolveWorkspace: workspaceService.resolveWorkspace,
-    repoMap: config.repoMap,
-    allowGitFreeform: config.allowGitFreeform,
-    ensureDir,
+  });
+  const dockerService = createDockerService({
+    runCmd,
+    logLine,
   });
 
   const bot = new TelegramBot(config.token, { polling: true });
@@ -51,6 +53,7 @@ function startApp() {
     workspaceService,
     codexService,
     sysService,
+    dockerService,
   });
 
   console.log("Telegram agent running (polling)...");
