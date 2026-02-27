@@ -28,8 +28,6 @@ function createCommandRouter({
       "/codex model             (lihat model aktif + config path)",
       "/codex set_model <model> (set model ke config.toml + bot)",
       "/codex models            (list model rekomendasi)",
-      "/codex quota             (cara cek remaining limits)",
-      "/codex usage_probe       (lihat token usage 1 run kecil via --json)",
     ].join("\n");
   }
 
@@ -121,10 +119,6 @@ function createCommandRouter({
         return codexService.setDefaultModel(value);
       }
       return { ok: false, code: 1, out: "", err: "Unknown codex_admin action" };
-    }
-
-    if (item.kind === "codex_usage_probe") {
-      return codexService.usageProbe();
     }
 
     return { ok: false, code: 1, out: "", err: "Unknown task kind." };
@@ -267,29 +261,6 @@ function createCommandRouter({
         "Kamu bisa set default via `/codex set_model <model>` atau override per run dengan `--model/-m`.",
       ].join("\n");
       await safeSend(chatId, out);
-      return true;
-    }
-
-    if (text === "/codex quota") {
-      const out = [
-        "Remaining limits / 'kuota' Codex:",
-        "- Cara resmi: cek di Codex usage dashboard, atau buka Codex CLI interaktif lalu jalankan `/status`.",
-        "",
-        "Catatan:",
-        "- Bot ini pakai `codex exec` (non-interactive), dan tidak ada perintah resmi untuk ambil 'remaining limits' langsung dari mode ini.",
-        "- Kalau butuh angka token pemakaian per run, pakai: /codex usage_probe",
-      ].join("\n");
-      await safeSend(chatId, out);
-      return true;
-    }
-
-    if (text === "/codex usage_probe") {
-      await enqueueWithConfirm(chatId, "codex_usage_probe", {}, [
-        "Kind: CODEX_USAGE_PROBE",
-        "Action: run 1 tiny codex exec --json to read turn.completed.usage (tokens).",
-        `Model: ${codexService.getActiveModel() || "(default)"}`,
-        "Note: ini mengonsumsi sedikit kuota karena benar-benar menjalankan 1 request.",
-      ]);
       return true;
     }
 

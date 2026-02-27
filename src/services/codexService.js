@@ -11,7 +11,6 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
   }
 
   function getModelFromToml(tomlText) {
-    // tries to find top-level: model = "..."
     if (!tomlText) return null;
     const re = /^\s*model\s*=\s*"(.*?)"\s*$/m;
     const m = tomlText.match(re);
@@ -26,7 +25,6 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
       return toml.replace(re, `model = "${model}"`);
     }
 
-    // insert model before first table if exists
     const lines = toml.split(/\r?\n/);
     const tableIdx = lines.findIndex((l) => /^\s*\[.+\]\s*$/.test(l));
     const insertLine = `model = "${model}"`;
@@ -42,11 +40,9 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
 
   function writeCodexModel(model) {
     ensureDir(path.dirname(codexConfigPath));
-
     const current = readCodexConfigToml() || "";
     const updated = setModelInToml(current, model);
 
-    // backup
     try {
       if (current) {
         const bak = codexConfigPath + `.bak.${Date.now()}`;
@@ -66,7 +62,7 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
   }
 
   async function execTask({ workspacePath, sandboxMode, prompt, enableNetwork = false, modelOverride = null }) {
-    const args = ["exec", "-a", "never", "--sandbox", sandboxMode, "-C", workspacePath];
+    const args = ["exec", "--sandbox", sandboxMode, "-C", workspacePath];
     const modelToUse = modelOverride || activeModel;
 
     if (modelToUse) {
@@ -79,52 +75,6 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
 
     args.push(prompt);
     return runCmd("codex", args);
-  }
-
-  async function usageProbe() {
-    const args = [
-      "exec",
-      "--json",
-      "--ephemeral",
-      "-a",
-      "never",
-      "--sandbox",
-      "read-only",
-      "--skip-git-repo-check",
-    ];
-
-    if (activeModel) {
-      args.push("--model", activeModel);
-    }
-
-    args.push("Reply with exactly: OK");
-
-    const res = await runCmd("codex", args);
-    if (!res.ok) return res;
-
-    let usage = null;
-    try {
-      const lines = res.out
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      for (const line of lines) {
-        const obj = JSON.parse(line);
-        if (obj?.type === "turn.completed" && obj?.usage) {
-          usage = obj.usage;
-        }
-      }
-    } catch {}
-
-    return {
-      ok: true,
-      code: res.code,
-      out: usage
-        ? `Probe usage (tokens):\n- input_tokens: ${usage.input_tokens}\n- cached_input_tokens: ${usage.cached_input_tokens}\n- output_tokens: ${usage.output_tokens}`
-        : "Probe finished, tapi tidak berhasil membaca usage dari JSONL output.",
-      err: res.err,
-    };
   }
 
   function getActiveModel() {
@@ -152,7 +102,6 @@ function createCodexService({ codexConfigPath, runCmd, ensureDir, logLine = () =
 
   return {
     execTask,
-    usageProbe,
     getActiveModel,
     getConfigPath,
     getConfigModel,
