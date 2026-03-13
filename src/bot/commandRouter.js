@@ -11,6 +11,7 @@ function createCommandRouter({
   codexService,
   sysService,
   dockerService,
+  ollamaService,
 }) {
   let busy = false;
   const pending = new Map(); // code -> { chatId, kind, payload, createdAt }
@@ -36,6 +37,17 @@ function createCommandRouter({
       "/codex model             (lihat model aktif + config path)",
       "/codex set_model <model> (set model ke config.toml + bot)",
       "/codex models            (list model rekomendasi)",
+    ].join("\n");
+  }
+
+  function ollamaHelpText() {
+    return [
+      "Ollama commands:",
+      "/ollama",
+      "/ollama list",
+      "/ollama ps",
+      "/ollama pull <model>",
+      "/ollama stop <model>",
     ].join("\n");
   }
 
@@ -78,6 +90,14 @@ function createCommandRouter({
       "- <code>/docker | &lt;prompt&gt;</code>",
       "- <code>/docker &lt;container&gt; | &lt;prompt&gt;</code>",
       "<b><i>Contoh: <code>/docker web | cek logs error lalu restart</code></i></b>",
+      "",
+      "<b>Ollama Ops</b>",
+      "- <code>/ollama</code>",
+      "- <code>/ollama list</code>",
+      "- <code>/ollama ps</code>",
+      "- <code>/ollama pull &lt;model&gt;</code>",
+      "- <code>/ollama stop &lt;model&gt;</code>",
+      "<b><i>Konfirmasi hanya untuk <code>pull</code> dan <code>stop</code>: <code>/confirm &lt;kode&gt;</code> atau <code>/cancel &lt;kode&gt;</code></i></b>",
       "",
       "<b>Codex Management</b>",
       "- <code>/codex</code>",
@@ -152,6 +172,10 @@ function createCommandRouter({
 
     if (item.kind === "docker") {
       return dockerService.execDockerPlan(item.payload.plan);
+    }
+
+    if (item.kind === "ollama") {
+      return ollamaService.execTask(item.payload);
     }
 
     return { ok: false, code: 1, out: "", err: "Unknown task kind." };
@@ -343,6 +367,49 @@ function createCommandRouter({
     return true;
   }
 
+  async function handleOllamaCommands(chatId, text) {
+    if (text === "/ollama" || text === "/ollama help") {
+      await safeSend(chatId, ollamaHelpText());
+      return true;
+    }
+
+    if (text === "/ollama list") {
+      const res = await ollamaService.listModels();
+      await safeSend(chatId, res.ok ? res.out : res.out + "\n" + res.err);
+      return true;
+    }
+
+    if (text === "/ollama ps") {
+      const res = await ollamaService.listRunningModels();
+      await safeSend(chatId, res.ok ? res.out : res.out + "\n" + res.err);
+      return true;
+    }
+
+    if (!text.startsWith("/ollama ")) return false;
+
+    const parts = text.split(/\s+/);
+    const action = (parts[1] || "").trim().toLowerCase();
+    const model = text.replace(/^\/ollama\s+\S+/, "").trim();
+
+    if (!action || !model) {
+      await safeSend(chatId, "Format: /ollama pull <model>\natau: /ollama stop <model>");
+      return true;
+    }
+
+    if (action !== "pull" && action !== "stop") {
+      await safeSend(chatId, "Subcommand /ollama tidak dikenal. Pakai: list | ps | pull | stop");
+      return true;
+    }
+
+    await enqueueWithConfirm(chatId, "ollama", { action, model }, [
+      "Kind: OLLAMA",
+      `Action: ${action}`,
+      `Model: ${model}`,
+      `Host: ${ollamaService.getBaseUrl()}`,
+    ]);
+    return true;
+  }
+
   async function handleGitCommands(chatId, text) {
     if (text === "/git" || text === "/git help") {
       const usage = [
@@ -487,6 +554,7 @@ function createCommandRouter({
     handleApprovalCommands,
     handleCodexManagementCommands,
     handleDockerCommands,
+    handleOllamaCommands,
     handleGitCommands,
     handleSysCommands,
     handleCodexRunCommands,

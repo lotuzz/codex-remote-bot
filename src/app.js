@@ -9,6 +9,7 @@ const { createWorkspaceService } = require("./services/workspaceService");
 const { createCodexService } = require("./services/codexService");
 const { createSysService } = require("./services/sysService");
 const { createDockerService } = require("./services/dockerService");
+const { createOllamaService } = require("./services/ollamaService");
 
 function startApp() {
   const config = loadConfig();
@@ -36,6 +37,11 @@ function startApp() {
     runCmd,
     logLine,
   });
+  const ollamaService = createOllamaService({
+    baseUrl: config.ollamaBaseUrl,
+    requestTimeoutMs: config.ollamaRequestTimeoutMs,
+    logLine,
+  });
 
   const bot = new TelegramBot(config.token, { polling: true });
   const safeSend = createSafeSend(bot);
@@ -54,6 +60,7 @@ function startApp() {
     codexService,
     sysService,
     dockerService,
+    ollamaService,
   });
 
   console.log("Telegram agent running (polling)...");
