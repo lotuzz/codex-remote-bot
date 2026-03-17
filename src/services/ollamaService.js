@@ -2,12 +2,7 @@ const http = require("http");
 const https = require("https");
 
 function createOllamaService({ baseUrl, requestTimeoutMs = 10 * 60 * 1000, logLine = () => {} }) {
-  function normalizeBaseUrl(input) {
-    const raw = String(input).trim().replace(/\/+$/, "");
-    return raw.endsWith("/api") ? raw : `${raw}/api`;
-  }
-
-  const apiBaseUrl = normalizeBaseUrl(baseUrl);
+  const apiBaseUrl = String(baseUrl).trim().replace(/\/+$/, "");
 
   function buildUrl(pathname) {
     return new URL(String(pathname || "").replace(/^\/+/, ""), `${apiBaseUrl}/`);

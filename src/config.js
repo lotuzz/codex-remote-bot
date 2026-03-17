@@ -31,6 +31,8 @@ function loadConfig() {
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN belum diisi di .env");
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL?.trim();
+  if (!ollamaBaseUrl) throw new Error("OLLAMA_BASE_URL belum diisi di .env");
 
   const defaultCodexConfigPath = path.join(homeDir, ".codex", "config.toml");
 
@@ -50,7 +52,7 @@ function loadConfig() {
     workspaceMap: parseKeyValueList(process.env.CODEX_WORKSPACES),
     repoMap: parseKeyValueList(process.env.GIT_REPOS),
     allowNetworkTasks: toBool(process.env.ALLOW_NETWORK_TASKS, false),
-    ollamaBaseUrl: process.env["OLLAMA_BASE_URL"],
+    ollamaBaseUrl,
     ollamaRequestTimeoutMs: Number.parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || "", 10) || 10 * 60 * 1000,
   };
 }
