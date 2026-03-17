@@ -3,7 +3,7 @@ const https = require("https");
 
 function createOllamaService({ baseUrl, requestTimeoutMs = 10 * 60 * 1000, logLine = () => {} }) {
   function normalizeBaseUrl(input) {
-    const raw = String(input || "http://127.0.0.1:11434").trim().replace(/\/+$/, "");
+    const raw = String(input).trim().replace(/\/+$/, "");
     return raw.endsWith("/api") ? raw : `${raw}/api`;
   }
 
