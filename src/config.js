@@ -50,7 +50,7 @@ function loadConfig() {
     workspaceMap: parseKeyValueList(process.env.CODEX_WORKSPACES),
     repoMap: parseKeyValueList(process.env.GIT_REPOS),
     allowNetworkTasks: toBool(process.env.ALLOW_NETWORK_TASKS, false),
-    ollamaBaseUrl: process.env[OLLAMA_BASE_URL],
+    ollamaBaseUrl: process.env["OLLAMA_BASE_URL"],
     ollamaRequestTimeoutMs: Number.parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || "", 10) || 10 * 60 * 1000,
   };
 }
