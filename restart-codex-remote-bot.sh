@@ -3,10 +3,23 @@ set -euo pipefail
 
 BOT_DIR="/home/reinaldomh2009/assistant/codex-remote-bot"
 SERVICE="codex-remote-bot.service"
+MODE="${1:-run}"
 
-echo "[INFO] Updating repo in: $BOT_DIR"
 cd "$BOT_DIR"
 
+if [ "$MODE" = "run" ]; then
+  WINDOWS_HOST_IP="$(ip route | awk '/default/ {print $3; exit}')"
+  export OLLAMA_BASE_URL="http://${WINDOWS_HOST_IP}:11434/api"
+  exec /usr/bin/env node "$BOT_DIR/index.js"
+fi
+
+if [ "$MODE" != "deploy" ]; then
+  echo "[ERROR] Unknown mode: $MODE" >&2
+  echo "[ERROR] Use: run | deploy" >&2
+  exit 2
+fi
+
+echo "[INFO] Updating repo in: $BOT_DIR"
 git fetch --all --prune
 git pull --ff-only || {
   echo "[ERROR] git pull failed (non-fast-forward). Resolve manually." >&2
